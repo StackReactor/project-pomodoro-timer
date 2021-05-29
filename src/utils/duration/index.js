@@ -11,7 +11,7 @@
  *    the given minutes formatted as 'mm:00'
  */
 
-export function minutesToDuration(givenMinutes) {
+ export function minutesToDuration(givenMinutes) {
   const minutes = Math.floor(givenMinutes).toString().padStart(2, "0");
   return `${minutes}:00`;
 }

@@ -13,18 +13,88 @@ describe("Pomodoro Timer", () => {
     jest.useFakeTimers();
   });
 
-  test("Clicking play button changes it to a pause button", async () => {
-    const { getByTestId } = render(<Pomodoro />);
+  describe("play button", () => {
+    test("changes to pause button when clicked", async () => {
+      const { getByTestId } = render(<Pomodoro />);
 
-    const playPauseButton = getByTestId("play-pause");
+      const playPauseButton = getByTestId("play-pause");
 
-    expect(playPauseButton.firstChild).toHaveClass("oi-media-play");
-    expect(playPauseButton.firstChild).not.toHaveClass("oi-media-pause");
+      expect(playPauseButton.firstChild).toHaveClass("oi-media-play");
+      expect(playPauseButton.firstChild).not.toHaveClass("oi-media-pause");
 
-    userEvent.click(playPauseButton);
+      userEvent.click(playPauseButton);
 
-    expect(playPauseButton.firstChild).not.toHaveClass("oi-media-play");
-    expect(playPauseButton.firstChild).toHaveClass("oi-media-pause");
+      expect(playPauseButton.firstChild).not.toHaveClass("oi-media-play");
+      expect(playPauseButton.firstChild).toHaveClass("oi-media-pause");
+    });
+  });
+
+  describe("stop button", () => {
+    test("is disabled by default", async () => {
+      const { getByTestId } = render(<Pomodoro />);
+
+      const stopButton = getByTestId("stop");
+      expect(stopButton).toBeDisabled();
+    });
+    test("stops focus session when clicked", async () => {
+      const { getByTestId, queryByTestId } = render(<Pomodoro />);
+
+      const stopButton = getByTestId("stop");
+      const playPauseButton = getByTestId("play-pause");
+
+      userEvent.click(playPauseButton);
+
+      expect(stopButton).toBeEnabled();
+
+      // Fast-forward 15 seconds
+      act(() => jest.advanceTimersByTime(15000));
+
+      expect(getByTestId("session-title")).toBeDefined();
+      expect(getByTestId("session-sub-title")).toBeDefined();
+
+      userEvent.click(stopButton); // Stop timer
+
+      expect(stopButton).toBeDisabled();
+
+      // Fast-forward 15 seconds
+      act(() => jest.advanceTimersByTime(15000));
+
+      expect(queryByTestId("session-title")).toBeNull();
+      expect(queryByTestId("session-sub-title")).toBeNull();
+    });
+    test("stops break session when clicked", async () => {
+      const { getByTestId, queryByTestId } = render(<Pomodoro />);
+
+      const stopButton = getByTestId("stop");
+      const playPauseButton = getByTestId("play-pause");
+      const decreaseFocus = getByTestId("decrease-focus");
+
+      Array(10)
+        .fill(0)
+        .forEach(() => {
+          userEvent.click(decreaseFocus);
+        });
+
+      userEvent.click(getByTestId("play-pause"));
+
+      expect(stopButton).toBeEnabled();
+
+      // Fast-forward 5.5 minutes to be in break session
+      act(() => jest.advanceTimersByTime(330000));
+
+      expect(getByTestId("session-title")).toBeDefined();
+      expect(getByTestId("session-sub-title")).toBeDefined();
+
+      userEvent.click(stopButton); // Stop timer
+
+      expect(stopButton).toBeDisabled();
+
+      // Fast-forward 15 seconds
+      act(() => jest.advanceTimersByTime(15000));
+
+      expect(queryByTestId("session-title")).toBeNull();
+      expect(queryByTestId("session-sub-title")).toBeNull();
+    });
   });
 
   describe("Focus duration", () => {
@@ -172,6 +242,12 @@ describe("Pomodoro Timer", () => {
   });
 
   describe("Session title", () => {
+    test("is not displayed when stopped", () => {
+      const { queryByTestId } = render(<Pomodoro />);
+
+      expect(queryByTestId("session-title")).toBeNull();
+    });
+
     test('displays "Focusing for 25:00 minutes" by default', () => {
       const { getByTestId } = render(<Pomodoro />);
 
@@ -195,8 +271,8 @@ describe("Pomodoro Timer", () => {
 
       userEvent.click(getByTestId("play-pause"));
 
-      // Fast-forward 25.5 minutes so default 25:00 focus timer expires
-      act(() => jest.advanceTimersByTime(1530000));
+      // Fast-forward 5.5 minutes so 5:00 focus timer expires
+      act(() => jest.advanceTimersByTime(330000));
 
       expect(getByTestId("session-title")).toHaveTextContent(
         "On Break for 05:00 minutes"
@@ -243,7 +319,7 @@ describe("Pomodoro Timer", () => {
         "On Break for 01:00 minutes"
       );
     });
-    test('starts a new focus session after break session expires', () => {
+    test("starts a new focus session after break session expires", () => {
       const { getByTestId } = render(<Pomodoro />);
 
       // Set the times to the minimums
@@ -269,6 +345,12 @@ describe("Pomodoro Timer", () => {
   });
 
   describe("Session sub-title", () => {
+    test("is not displayed when stopped", () => {
+      const { queryByTestId } = render(<Pomodoro />);
+
+      expect(queryByTestId("session-sub-title")).toBeNull();
+    });
+
     test('displays "25:00 remaining" by default', () => {
       const { getByTestId } = render(<Pomodoro />);
 
@@ -296,7 +378,7 @@ describe("Pomodoro Timer", () => {
       );
     });
 
-    test("Clicking pause button stops the timer", () => {
+    test("pauses timer by clicking pause button", () => {
       const { getByTestId } = render(<Pomodoro />);
 
       const playPauseButton = getByTestId("play-pause");
@@ -322,6 +404,11 @@ describe("Pomodoro Timer", () => {
   });
 
   describe("Progress bar", () => {
+    test("is not displayed when stopped", () => {
+      const { queryByTestId } = render(<Pomodoro />);
+
+      expect(queryByTestId("progressbar")).toBeNull();
+    });
     test("displays 0% progress by default", () => {
       const { getByRole, getByTestId } = render(<Pomodoro />);
       // start the session
